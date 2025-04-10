@@ -32,6 +32,9 @@
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
+    .controls label {
+      font-size: 18px;
+    }
     .controls input, .controls button {
       padding: 10px;
       font-size: 18px;
@@ -43,12 +46,15 @@
       max-width: 1200px;
       margin: auto;
     }
-    canvas {
-      width: 100% !important;
-      height: 500px !important;
+    .chart-box {
       background: white;
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    canvas {
+      width: 100% !important;
+      height: 400px !important;
     }
     table {
       border-collapse: collapse;
@@ -79,16 +85,16 @@
   <h1>CO2 Monitoring Dashboard</h1>
 
   <div class="controls">
-    <label>Dari: <input type="date" id="start-date"></label>
-    <label>Sampai: <input type="date" id="end-date"></label>
+    <label>Start Date: <input type="date" id="start-date"></label>
+    <label>End Date: <input type="date" id="end-date"></label>
     <button onclick="exportToCSV()">Export CSV</button>
   </div>
 
   <div class="chart-container">
-    <canvas id="co2Chart"></canvas>
-    <canvas id="tempChart"></canvas>
-    <canvas id="humidityChart"></canvas>
-    <canvas id="methaneChart"></canvas>
+    <div class="chart-box"><canvas id="co2Chart"></canvas></div>
+    <div class="chart-box"><canvas id="tempChart"></canvas></div>
+    <div class="chart-box"><canvas id="humidityChart"></canvas></div>
+    <div class="chart-box"><canvas id="methaneChart"></canvas></div>
   </div>
 
   <div class="table-wrapper">
