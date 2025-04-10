@@ -179,8 +179,10 @@
                 }
               },
               ticks: {
+                autoSkip: true,
+                maxTicksLimit: 10,
                 font: {
-                  size: 18
+                  size: 16
                 }
               }
             },
@@ -214,7 +216,9 @@
         const e = data[ts];
         if (!e) return;
 
-        labels.push(ts);
+        const shortLabel = ts.replace('T', ' ').slice(5, 16); // example: "04-10 10:25"
+
+        labels.push(shortLabel);
         co2.push(e.CO2 ?? 0);
         temp.push(e.temperature ?? 0);
         humidity.push(e.humidity ?? 0);
