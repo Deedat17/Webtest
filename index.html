@@ -19,13 +19,10 @@
       padding: 20px;
       color: #333;
     }
-    body.dark-mode {
-      background-color: #1e1e2f;
-      color: #f0f0f0;
-    }
     h1 {
       text-align: center;
       margin-bottom: 30px;
+      font-size: 36px;
     }
     .controls {
       display: flex;
@@ -35,77 +32,45 @@
       flex-wrap: wrap;
     }
     .controls input, .controls button {
-      padding: 8px;
-      font-size: 14px;
+      padding: 10px;
+      font-size: 18px;
     }
     .chart-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 20px;
-      max-width: 1000px;
-      margin: 40px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      max-width: 1200px;
+      margin: auto;
     }
     canvas {
       width: 100% !important;
-      height: auto !important;
+      height: 500px !important;
       background: white;
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease-in-out;
-    }
-    canvas:hover {
-      transform: scale(1.02);
-    }
-    body.dark-mode canvas {
-      background: #2a2a40;
     }
     table {
       border-collapse: collapse;
       width: 100%;
       background: #fff;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      overflow: auto;
-      margin-top: 40px;
-      font-size: 14px;
-    }
-    body.dark-mode table {
-      background: #2a2a40;
+      margin-top: 30px;
+      font-size: 18px;
     }
     th, td {
-      border-bottom: 1px solid #eee;
-      padding: 12px 15px;
+      border: 1px solid #ddd;
+      padding: 16px;
       text-align: center;
-      font-size: 15px;
     }
     th {
       background-color: #007bff;
       color: white;
+      font-size: 20px;
     }
     tr:hover {
       background-color: #f1f1f1;
     }
-    body.dark-mode tr:hover {
-      background-color: #3c3c5a;
-    }
-
-    @media (max-width: 768px) {
-      .chart-container {
-        grid-template-columns: 1fr !important;
-      }
-
-      .controls {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      canvas {
-        max-height: 300px;
-      }
-
-      th, td {
-        font-size: 14px;
-      }
+    .table-wrapper {
+      overflow-x: auto;
     }
   </style>
 </head>
@@ -116,7 +81,6 @@
     <label>Dari: <input type="date" id="start-date"></label>
     <label>Sampai: <input type="date" id="end-date"></label>
     <button onclick="exportToCSV()">Export CSV</button>
-    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
   </div>
 
   <div class="chart-container">
@@ -126,23 +90,24 @@
     <canvas id="methaneChart"></canvas>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Timestamp</th>
-        <th>CO2 (ppm)</th>
-        <th>Temperature (°C)</th>
-        <th>Humidity (%)</th>
-        <th>Methane (ppm)</th>
-        <th>Analog CH4</th>
-      </tr>
-    </thead>
-    <tbody id="data-table"></tbody>
-  </table>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>CO2 (ppm)</th>
+          <th>Temperature (°C)</th>
+          <th>Humidity (%)</th>
+          <th>Methane (ppm)</th>
+          <th>Analog CH4</th>
+        </tr>
+      </thead>
+      <tbody id="data-table"></tbody>
+    </table>
+  </div>
 
   <audio id="alertSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
 
-  <!-- Main Script -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyB_Az8o_NvqVSWezD9agZ4Hrj8RAxXFlCY",
@@ -181,15 +146,51 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: label,
+              font: {
+                size: 32
+              }
+            },
+            legend: {
+              labels: {
+                font: {
+                  size: 22
+                }
+              }
+            }
+          },
           scales: {
-            x: { title: { display: true, text: 'Time' }},
+            x: {
+              title: {
+                display: true,
+                text: 'Time',
+                font: {
+                  size: 22
+                }
+              },
+              ticks: {
+                font: {
+                  size: 18
+                }
+              }
+            },
             y: {
-              title: { display: true, text: label },
-              beginAtZero: true,
-              suggestedMax: label.includes("CO2") ? 2000 :
-                            label.includes("Methane") ? 2000 :
-                            label.includes("Humidity") ? 100 :
-                            label.includes("Temperature") ? 50 : undefined
+              title: {
+                display: true,
+                text: label,
+                font: {
+                  size: 22
+                }
+              },
+              ticks: {
+                font: {
+                  size: 18
+                }
+              },
+              beginAtZero: true
             }
           }
         }
@@ -206,8 +207,7 @@
         const e = data[ts];
         if (!e) return;
 
-        const t = formatTimestamp(ts);
-        labels.push(t);
+        labels.push(ts);
         co2.push(e.CO2 ?? 0);
         temp.push(e.temperature ?? 0);
         humidity.push(e.humidity ?? 0);
@@ -215,7 +215,7 @@
 
         const row = `
           <tr>
-            <td>${t}</td>
+            <td>${ts}</td>
             <td>${e.CO2 ?? 'N/A'}</td>
             <td>${e.temperature ?? 'N/A'}</td>
             <td>${e.humidity ?? 'N/A'}</td>
@@ -225,7 +225,7 @@
         `;
         tbody.innerHTML += row;
 
-        csv.push([t, e.CO2, e.temperature, e.humidity, e.methane, e.analogvalues]);
+        csv.push([ts, e.CO2, e.temperature, e.humidity, e.methane, e.analogvalues]);
 
         if (e.CO2 > 1000 || e.methane > 1000) {
           document.getElementById('alertSound').play();
@@ -244,15 +244,6 @@
 
       Object.values(charts).forEach(chart => chart.update());
       window.csvData = csv;
-    }
-
-    function formatTimestamp(ts) {
-      // Convert Firebase timestamp string (ISO or custom) to readable format
-      const date = new Date(ts);
-      if (isNaN(date)) return ts; // fallback
-      const d = date.toLocaleDateString('id-ID');
-      const t = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      return `${d} ${t}`;
     }
 
     function fetchData() {
@@ -281,10 +272,6 @@
       });
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       saveAs(blob, "data-export.csv");
-    }
-
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
     }
 
     document.getElementById('start-date').addEventListener('change', fetchData);
