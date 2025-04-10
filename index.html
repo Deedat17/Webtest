@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CO2 Monitoring Dashboard</title>
+
+  <!-- Firebase & Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver"></script>
+
+  <!-- Styles -->
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    body.dark-mode {
+      background-color: #1e1e2f;
+      color: #f0f0f0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .controls input, .controls button {
+      padding: 8px;
+      font-size: 14px;
+    }
+    .chart-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 40px auto;
+    }
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease-in-out;
+    }
+    canvas:hover {
+      transform: scale(1.02);
+    }
+    body.dark-mode canvas {
+      background: #2a2a40;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 40px;
+    }
+    body.dark-mode table {
+      background: #2a2a40;
+    }
+    th, td {
+      border-bottom: 1px solid #eee;
+      padding: 12px 15px;
+      text-align: center;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    body.dark-mode tr:hover {
+      background-color: #3c3c5a;
+    }
+  </style>
+</head>
+<body>
+  <h1>CO2 Monitoring Dashboard</h1>
+
+  <div class="controls">
+    <label>Dari: <input type="date" id="start-date"></label>
+    <label>Sampai: <input type="date" id="end-date"></label>
+    <button onclick="exportToCSV()">Export CSV</button>
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="co2Chart"></canvas>
+    <canvas id="tempChart"></canvas>
+    <canvas id="humidityChart"></canvas>
+    <canvas id="methaneChart"></canvas>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>CO2 (ppm)</th>
+        <th>Temperature (°C)</th>
+        <th>Humidity (%)</th>
+        <th>Methane (ppm)</th>
+        <th>Analog CH4</th>
+      </tr>
+    </thead>
+    <tbody id="data-table"></tbody>
+  </table>
+
+  <audio id="alertSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+
+  <!-- Main Script -->
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_Az8o_NvqVSWezD9agZ4Hrj8RAxXFlCY",
+      authDomain: "decompose-5702c.firebaseapp.com",
+      databaseURL: "https://decompose-5702c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "decompose-5702c",
+      storageBucket: "decompose-5702c.appspot.com",
+      messagingSenderId: "195684972273",
+      appId: "1:195684972273:web:93763c0dbc2e46cbe2db50",
+      measurementId: "G-42G22XTDJH"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref('AllData/CO2');
+
+    const charts = {
+      co2: createChart('co2Chart', 'CO2 (ppm)', '#007bff'),
+      temp: createChart('tempChart', 'Temperature (°C)', '#28a745'),
+      humidity: createChart('humidityChart', 'Humidity (%)', '#ffc107'),
+      methane: createChart('methaneChart', 'Methane (ppm)', '#dc3545')
+    };
+
+    function createChart(id, label, color) {
+      return new Chart(document.getElementById(id), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label,
+            data: [],
+            borderColor: color,
+            backgroundColor: color + '33',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: 'Time' }},
+            y: { title: { display: true, text: label }}
+          }
+        }
+      });
+    }
+
+    function updateChartsAndTable(data) {
+      const tbody = document.getElementById('data-table');
+      tbody.innerHTML = '';
+      let labels = [], co2 = [], temp = [], humidity = [], methane = [], csv = [];
+
+      const keys = Object.keys(data).sort();
+      keys.forEach(ts => {
+        const e = data[ts];
+        if (!e) return;
+
+        labels.push(ts);
+        co2.push(e.CO2 ?? 0);
+        temp.push(e.temperature ?? 0);
+        humidity.push(e.humidity ?? 0);
+        methane.push(e.methane ?? 0);
+
+        const row = `
+          <tr>
+            <td>${ts}</td>
+            <td>${e.CO2 ?? 'N/A'}</td>
+            <td>${e.temperature ?? 'N/A'}</td>
+            <td>${e.humidity ?? 'N/A'}</td>
+            <td>${e.methane ?? 'N/A'}</td>
+            <td>${e.analogvalues ?? 'N/A'}</td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+
+        csv.push([ts, e.CO2, e.temperature, e.humidity, e.methane, e.analogvalues]);
+
+        if (e.CO2 > 1000 || e.methane > 1000) {
+          document.getElementById('alertSound').play();
+        }
+      });
+
+      charts.co2.data.labels =
+      charts.temp.data.labels =
+      charts.humidity.data.labels =
+      charts.methane.data.labels = labels;
+
+      charts.co2.data.datasets[0].data = co2;
+      charts.temp.data.datasets[0].data = temp;
+      charts.humidity.data.datasets[0].data = humidity;
+      charts.methane.data.datasets[0].data = methane;
+
+      Object.values(charts).forEach(chart => chart.update());
+      window.csvData = csv;
+    }
+
+    function fetchData() {
+      db.once('value', snap => {
+        const data = snap.val();
+        if (!data) return;
+
+        const start = document.getElementById('start-date').value;
+        const end = document.getElementById('end-date').value;
+        const filtered = {};
+
+        Object.keys(data).forEach(key => {
+          if ((!start || key >= start) && (!end || key <= end)) {
+            filtered[key] = data[key];
+          }
+        });
+
+        updateChartsAndTable(filtered);
+      });
+    }
+
+    function exportToCSV() {
+      let csvContent = "Timestamp,CO2,Temperature,Humidity,Methane,AnalogCH4\n";
+      (window.csvData || []).forEach(row => {
+        csvContent += row.join(",") + "\n";
+      });
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      saveAs(blob, "data-export.csv");
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+    }
+
+    // Event listeners
+    document.getElementById('start-date').addEventListener('change', fetchData);
+    document.getElementById('end-date').addEventListener('change', fetchData);
+
+    // Initial fetch
+    fetchData();
+  </script>
+</body>
+</html>
