@@ -2,120 +2,818 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CO2 Monitoring Dashboard</title>
   <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/1/19/Carbon_dioxide_icon.png" />
-
+  
   <!-- Firebase & Libraries -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
   <!-- Styles -->
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f4f6f9;
+    :root {
+      --primary-color: #4361ee;
+      --success-color: #4cc9f0;
+      --warning-color: #f72585;
+      --danger-color: #ff3366;
+      --light-bg: #f8f9fa;
+      --dark-bg: #212529;
+      --card-bg: #ffffff;
+      --text-primary: #212529;
+      --text-secondary: #6c757d;
+      --border-radius: 12px;
+      --box-shadow: 0 8px 15px rgba(0, 0, 0, 0.05);
+      --transition: all 0.3s ease;
+    }
+
+    [data-theme="dark"] {
+      --light-bg: #121212;
+      --dark-bg: #212529;
+      --card-bg: #1e1e1e;
+      --text-primary: #f8f9fa;
+      --text-secondary: #adb5bd;
+    }
+
+    * {
       margin: 0;
-      padding: 20px;
-      color: #333;
+      padding: 0;
+      box-sizing: border-box;
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-      font-size: 36px;
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--light-bg);
+      color: var(--text-primary);
+      transition: var(--transition);
+      padding: 0;
+      margin: 0;
     }
-    .controls {
+
+    header {
+      background-color: var(--card-bg);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
       display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
     }
-    .controls label {
-      font-size: 18px;
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
-    .controls input, .controls button {
-      padding: 10px;
-      font-size: 18px;
+
+    .header-title h1 {
+      font-size: 1.8rem;
+      margin: 0;
     }
-    .chart-container {
+
+    .header-actions {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    .status-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
       display: flex;
       flex-direction: column;
-      gap: 40px;
-      max-width: 1200px;
-      margin: auto;
+      transition: var(--transition);
     }
-    .chart-box {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      padding: 20px;
+
+    .status-card:hover {
+      transform: translateY(-5px);
     }
-    canvas {
-      width: 100% !important;
-      height: 400px !important;
+
+    .status-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
     }
+
+    .status-card-title {
+      font-size: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .status-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .status-card-value {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-card-trend {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .controls {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .date-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    input[type="date"] {
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background-color: var(--card-bg);
+      color: var(--text-primary);
+    }
+
+    select {
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background-color: var(--card-bg);
+      color: var(--text-primary);
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #3652d9;
+      transform: translateY(-2px);
+    }
+
+    .btn-icon {
+      padding: 0.5rem;
+      border-radius: 50%;
+      background-color: var(--card-bg);
+      color: var(--text-secondary);
+      border: 1px solid #ced4da;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-icon:hover {
+      color: var(--primary-color);
+      transform: translateY(-2px);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-container {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
+      position: relative;
+      height: 400px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .chart-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .chart-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .data-table {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .table-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
     table {
       border-collapse: collapse;
       width: 100%;
-      background: #fff;
-      margin-top: 30px;
-      font-size: 18px;
+      font-size: 0.9rem;
     }
+
     th, td {
-      border: 1px solid #ddd;
-      padding: 16px;
-      text-align: center;
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e9ecef;
     }
+
     th {
-      background-color: #007bff;
-      color: white;
-      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-secondary);
     }
+
     tr:hover {
-      background-color: #f1f1f1;
+      background-color: rgba(0, 0, 0, 0.02);
     }
-    .table-wrapper {
-      overflow-x: auto;
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+
+    .status-normal {
+      background-color: #4cc9f0;
+    }
+
+    .status-warning {
+      background-color: #fcbf49;
+    }
+
+    .status-danger {
+      background-color: #ff3366;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .theme-switch {
+      display: flex;
+      align-items: center;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary-color);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 120px;
+      background-color: var(--dark-bg);
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -60px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.8rem;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .alert-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      width: 300px;
+    }
+
+    .alert {
+      background-color: var(--card-bg);
+      border-left: 4px solid var(--danger-color);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+
+    .alert-content {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alert-icon {
+      color: var(--danger-color);
+      font-size: 1.2rem;
+    }
+
+    .alert-message {
+      font-size: 0.9rem;
+    }
+
+    .alert-close {
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    .loader {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      background: rgba(255, 255, 255, 0.7);
+      z-index: 10;
+      top: 0;
+      left: 0;
+      border-radius: var(--border-radius);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary-color);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    [data-theme="dark"] .loader {
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    .refresh-timer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+    }
+
+    .pagination-info {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .pagination-button {
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      background-color: var(--card-bg);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .pagination-button:hover:not(:disabled) {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .pagination-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   </style>
 </head>
+
 <body>
-  <h1>CO2 Monitoring Dashboard</h1>
-
-  <div class="controls">
-    <label>Start Date: <input type="date" id="start-date"></label>
-    <label>End Date: <input type="date" id="end-date"></label>
-    <button onclick="exportToCSV()">Export CSV</button>
-  </div>
-
-  <div class="chart-container">
-    <div class="chart-box"><canvas id="co2Chart"></canvas></div>
-    <div class="chart-box"><canvas id="tempChart"></canvas></div>
-    <div class="chart-box"><canvas id="humidityChart"></canvas></div>
-    <div class="chart-box"><canvas id="methaneChart"></canvas></div>
-  </div>
-
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>CO2 (ppm)</th>
-          <th>Temperature (°C)</th>
-          <th>Humidity (%)</th>
-          <th>Methane (ppm)</th>
-          <th>Analog CH4</th>
-        </tr>
-      </thead>
-      <tbody id="data-table"></tbody>
-    </table>
-  </div>
-
   <audio id="alertSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+  
+  <div class="alert-container" id="alerts">
+    <!-- Alerts will be dynamically inserted here -->
+  </div>
+
+  <header>
+    <div class="header-title">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Carbon_dioxide_icon.png" alt="CO2 Icon" width="32" height="32">
+      <h1>CO2 Monitoring Dashboard</h1>
+    </div>
+    <div class="header-actions">
+      <div class="refresh-timer">
+        <i class="fas fa-sync-alt"></i>
+        <span id="refresh-countdown">Auto refresh in: 30s</span>
+      </div>
+      <button class="btn-icon tooltip" id="refresh-btn">
+        <i class="fas fa-sync-alt"></i>
+        <span class="tooltiptext">Refresh Data</span>
+      </button>
+      <div class="theme-switch">
+        <label class="switch">
+          <input type="checkbox" id="theme-toggle">
+          <span class="slider"></span>
+        </label>
+        <span id="theme-icon" class="ml-2">🌙</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="status-cards">
+      <div class="status-card">
+        <div class="status-card-header">
+          <div class="status-card-title">Current CO2 Level</div>
+          <div class="status-card-icon" style="background-color: var(--primary-color);">
+            <i class="fas fa-wind"></i>
+          </div>
+        </div>
+        <div class="status-card-value" id="current-co2">--</div>
+        <div class="status-card-trend">
+          <span id="co2-trend-icon"><i class="fas fa-minus"></i></span>
+          <span id="co2-trend">Stable</span>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-card-header">
+          <div class="status-card-title">Current Temperature</div>
+          <div class="status-card-icon" style="background-color: var(--success-color);">
+            <i class="fas fa-temperature-high"></i>
+          </div>
+        </div>
+        <div class="status-card-value" id="current-temp">--</div>
+        <div class="status-card-trend">
+          <span id="temp-trend-icon"><i class="fas fa-minus"></i></span>
+          <span id="temp-trend">Stable</span>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-card-header">
+          <div class="status-card-title">Current Humidity</div>
+          <div class="status-card-icon" style="background-color: var(--warning-color);">
+            <i class="fas fa-tint"></i>
+          </div>
+        </div>
+        <div class="status-card-value" id="current-humidity">--</div>
+        <div class="status-card-trend">
+          <span id="humidity-trend-icon"><i class="fas fa-minus"></i></span>
+          <span id="humidity-trend">Stable</span>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-card-header">
+          <div class="status-card-title">Current Methane</div>
+          <div class="status-card-icon" style="background-color: var(--danger-color);">
+            <i class="fas fa-atom"></i>
+          </div>
+        </div>
+        <div class="status-card-value" id="current-methane">--</div>
+        <div class="status-card-trend">
+          <span id="methane-trend-icon"><i class="fas fa-minus"></i></span>
+          <span id="methane-trend">Stable</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="date-group">
+        <label for="start-date">From:</label>
+        <input type="date" id="start-date">
+      </div>
+      <div class="date-group">
+        <label for="end-date">To:</label>
+        <input type="date" id="end-date">
+      </div>
+      <div class="control-group">
+        <label for="time-range">Quick Select:</label>
+        <select id="time-range">
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last 7 days</option>
+          <option value="month">Last 30 days</option>
+          <option value="custom" selected>Custom Range</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="refresh-rate">Auto-refresh:</label>
+        <select id="refresh-rate">
+          <option value="0">Off</option>
+          <option value="30" selected>30 seconds</option>
+          <option value="60">1 minute</option>
+          <option value="300">5 minutes</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="exportToCSV()">
+        <i class="fas fa-download"></i>
+        Export Data
+      </button>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">CO2 Levels (ppm)</div>
+          <div class="chart-actions">
+            <button class="btn-icon tooltip" onclick="toggleChartType('co2Chart')">
+              <i class="fas fa-chart-line"></i>
+              <span class="tooltiptext">Change Chart Type</span>
+            </button>
+            <button class="btn-icon tooltip" onclick="toggleChartFullscreen('co2Chart')">
+              <i class="fas fa-expand"></i>
+              <span class="tooltiptext">Fullscreen</span>
+            </button>
+          </div>
+        </div>
+        <canvas id="co2Chart"></canvas>
+        <div class="loader" id="co2-loader">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Temperature (°C)</div>
+          <div class="chart-actions">
+            <button class="btn-icon tooltip" onclick="toggleChartType('tempChart')">
+              <i class="fas fa-chart-line"></i>
+              <span class="tooltiptext">Change Chart Type</span>
+            </button>
+            <button class="btn-icon tooltip" onclick="toggleChartFullscreen('tempChart')">
+              <i class="fas fa-expand"></i>
+              <span class="tooltiptext">Fullscreen</span>
+            </button>
+          </div>
+        </div>
+        <canvas id="tempChart"></canvas>
+        <div class="loader" id="temp-loader">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Humidity (%)</div>
+          <div class="chart-actions">
+            <button class="btn-icon tooltip" onclick="toggleChartType('humidityChart')">
+              <i class="fas fa-chart-line"></i>
+              <span class="tooltiptext">Change Chart Type</span>
+            </button>
+            <button class="btn-icon tooltip" onclick="toggleChartFullscreen('humidityChart')">
+              <i class="fas fa-expand"></i>
+              <span class="tooltiptext">Fullscreen</span>
+            </button>
+          </div>
+        </div>
+        <canvas id="humidityChart"></canvas>
+        <div class="loader" id="humidity-loader">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Methane (ppm)</div>
+          <div class="chart-actions">
+            <button class="btn-icon tooltip" onclick="toggleChartType('methaneChart')">
+              <i class="fas fa-chart-line"></i>
+              <span class="tooltiptext">Change Chart Type</span>
+            </button>
+            <button class="btn-icon tooltip" onclick="toggleChartFullscreen('methaneChart')">
+              <i class="fas fa-expand"></i>
+              <span class="tooltiptext">Fullscreen</span>
+            </button>
+          </div>
+        </div>
+        <canvas id="methaneChart"></canvas>
+        <div class="loader" id="methane-loader">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="data-table">
+      <div class="table-header">
+        <div class="table-title">Sensor Data Log</div>
+        <div class="table-actions">
+          <button class="btn-icon tooltip" id="toggle-table">
+            <i class="fas fa-table"></i>
+            <span class="tooltiptext">Toggle Table</span>
+          </button>
+          <div class="control-group">
+            <select id="rows-per-page">
+              <option value="10">10 rows</option>
+              <option value="25" selected>25 rows</option>
+              <option value="50">50 rows</option>
+              <option value="100">100 rows</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp <button class="btn-icon tooltip" style="padding: 2px;" onclick="sortTable('timestamp')"><i class="fas fa-sort"></i></button></th>
+              <th>CO2 (ppm) <button class="btn-icon tooltip" style="padding: 2px;" onclick="sortTable('co2')"><i class="fas fa-sort"></i></button></th>
+              <th>Temperature (°C) <button class="btn-icon tooltip" style="padding: 2px;" onclick="sortTable('temperature')"><i class="fas fa-sort"></i></button></th>
+              <th>Humidity (%) <button class="btn-icon tooltip" style="padding: 2px;" onclick="sortTable('humidity')"><i class="fas fa-sort"></i></button></th>
+              <th>Methane (ppm) <button class="btn-icon tooltip" style="padding: 2px;" onclick="sortTable('methane')"><i class="fas fa-sort"></i></button></th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="data-table"></tbody>
+        </table>
+        <div class="pagination">
+          <div class="pagination-info">
+            Showing <span id="page-start">1</span> to <span id="page-end">25</span> of <span id="total-items">0</span> entries
+          </div>
+          <div class="pagination-controls">
+            <button class="pagination-button" id="prev-page" disabled><i class="fas fa-chevron-left"></i></button>
+            <span id="current-page">1</span> / <span id="total-pages">1</span>
+            <button class="pagination-button" id="next-page" disabled><i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <script>
+    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyB_Az8o_NvqVSWezD9agZ4Hrj8RAxXFlCY",
       authDomain: "decompose-5702c.firebaseapp.com",
@@ -129,166 +827,1026 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref('AllData/CO2');
 
+    // Global variables
+    let allData = [];
+    let paginatedData = [];
+    let sortColumn = 'timestamp';
+    let sortDirection = 'desc';
+    let currentPage = 1;
+    let rowsPerPage = 25;
+    let refreshInterval;
+    let refreshCountdown;
+    let chartTypes = {
+      co2Chart: 'line',
+      tempChart: 'line',
+      humidityChart: 'line',
+      methaneChart: 'line'
+    };
+    
+    // Chart.js defaults
+    Chart.defaults.font.family = "'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-primary');
+    
+    // Chart instances
     const charts = {
-      co2: createChart('co2Chart', 'CO2 (ppm)', '#007bff'),
-      temp: createChart('tempChart', 'Temperature (°C)', '#28a745'),
-      humidity: createChart('humidityChart', 'Humidity (%)', '#ffc107'),
-      methane: createChart('methaneChart', 'Methane (ppm)', '#dc3545')
+      co2: createChart('co2Chart', 'CO2 (ppm)', getComputedStyle(document.documentElement).getPropertyValue('--primary-color')),
+      temp: createChart('tempChart', 'Temperature (°C)', getComputedStyle(document.documentElement).getPropertyValue('--success-color')),
+      humidity: createChart('humidityChart', 'Humidity (%)', getComputedStyle(document.documentElement).getPropertyValue('--warning-color')),
+      methane: createChart('methaneChart', 'Methane (ppm)', getComputedStyle(document.documentElement).getPropertyValue('--danger-color'))
     };
 
-    function createChart(id, label, color) {
-      return new Chart(document.getElementById(id), {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [{
-            label,
-            data: [],
-            borderColor: color,
-            backgroundColor: color + '33',
-            tension: 0.3,
-            fill: true
-          }]
+    // Initialize date pickers with appropriate default values
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = new Date();
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(today.getDate() - 7);
+      
+      document.getElementById('end-date').valueAsDate = today;
+      document.getElementById('start-date').valueAsDate = oneWeekAgo;
+      
+      // Load theme from localStorage
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.body.setAttribute('data-theme', 'dark');
+        document.getElementById('theme-toggle').checked = true;
+        document.getElementById('theme-icon').textContent = '☀️';
+        updateChartTheme('dark');
+      }
+      
+      // Initialize chart loaders
+      showLoaders(true);
+      
+      // Fetch data
+      fetchData();
+      
+      // Start auto-refresh
+      startRefreshTimer();
+      
+      // Add event listeners
+      setupEventListeners();
+    });
+
+    function setupEventListeners() {
+      // Date filter events
+      document.getElementById('start-date').addEventListener('change', handleDateChange);
+      document.getElementById('end-date').addEventListener('change', handleDateChange);
+      document.getElementById('time-range').addEventListener('change', handleTimeRangeChange);
+      
+      // Theme toggle
+      document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
+      
+      // Refresh controls
+      document.getElementById('refresh-btn').addEventListener('click', manualRefresh);
+      document.getElementById('refresh-rate').addEventListener('change', changeRefreshRate);
+      
+// Pagination controls
+document.getElementById('rows-per-page').addEventListener('change', function() {
+  rowsPerPage = parseInt(this.value);
+  currentPage = 1;
+  updatePaginatedData();
+});
+document.getElementById('prev-page').addEventListener('click', function() {
+  if (currentPage > 1) {
+    currentPage--;
+    updatePaginatedData();
+  }
+});
+document.getElementById('next-page').addEventListener('click', function() {
+  const totalPages = Math.ceil(allData.length / rowsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    updatePaginatedData();
+  }
+});
+
+// Table controls
+document.getElementById('toggle-table').addEventListener('click', function() {
+  const tableResponsive = document.querySelector('.table-responsive');
+  tableResponsive.style.display = tableResponsive.style.display === 'none' ? 'block' : 'none';
+  this.querySelector('i').classList.toggle('fa-table');
+  this.querySelector('i').classList.toggle('fa-list');
+});
+}
+
+function handleTimeRangeChange() {
+  const selectedValue = document.getElementById('time-range').value;
+  const today = new Date();
+  let startDate;
+  
+  switch (selectedValue) {
+    case 'today':
+      startDate = new Date(today.setHours(0, 0, 0, 0));
+      break;
+    case 'yesterday':
+      startDate = new Date(today.setDate(today.getDate() - 1));
+      startDate.setHours(0, 0, 0, 0);
+      today.setHours(23, 59, 59, 999);
+      break;
+    case 'week':
+      startDate = new Date(today.setDate(today.getDate() - 7));
+      break;
+    case 'month':
+      startDate = new Date(today.setDate(today.getDate() - 30));
+      break;
+    case 'custom':
+      return; // Do nothing, use the date inputs
+  }
+  
+  const endDate = new Date();
+  
+  document.getElementById('start-date').valueAsDate = startDate;
+  document.getElementById('end-date').valueAsDate = endDate;
+  
+  fetchData();
+}
+
+function handleDateChange() {
+  document.getElementById('time-range').value = 'custom';
+  fetchData();
+}
+
+function toggleTheme() {
+  const isDark = document.getElementById('theme-toggle').checked;
+  const theme = isDark ? 'dark' : 'light';
+  
+  document.body.setAttribute('data-theme', theme);
+  document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+  
+  localStorage.setItem('theme', theme);
+  updateChartTheme(theme);
+}
+
+function updateChartTheme(theme) {
+  const textColor = getComputedStyle(document.body).getPropertyValue('--text-primary');
+  const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+  
+  Chart.defaults.color = textColor;
+  
+  Object.values(charts).forEach(chart => {
+    chart.options.scales.x.grid.color = gridColor;
+    chart.options.scales.y.grid.color = gridColor;
+    chart.update();
+  });
+}
+
+function createChart(id, label, color) {
+  return new Chart(document.getElementById(id), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label,
+        data: [],
+        borderColor: color,
+        backgroundColor: color + '33',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: false
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            title: {
-              display: true,
-              text: label,
-              font: {
-                size: 32
-              }
-            },
-            legend: {
-              labels: {
-                font: {
-                  size: 22
-                }
-              }
+        tooltip: {
+          enabled: true,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          titleFont: {
+            size: 16
+          },
+          bodyFont: {
+            size: 14
+          },
+          padding: 12,
+          displayColors: false
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: true,
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          ticks: {
+            autoSkip: true,
+            maxTicksLimit: 8,
+            font: {
+              size: 12
+            }
+          }
+        },
+        y: {
+          grid: {
+            display: true,
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          ticks: {
+            font: {
+              size: 12
             }
           },
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Time',
-                font: {
-                  size: 22
-                }
-              },
-              ticks: {
-                autoSkip: true,
-                maxTicksLimit: 10,
-                font: {
-                  size: 16
-                }
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: label,
-                font: {
-                  size: 22
-                }
-              },
-              ticks: {
-                font: {
-                  size: 18
-                }
-              },
-              beginAtZero: true
-            }
-          }
+          beginAtZero: false
         }
+      }
+    }
+  });
+}
+
+function toggleChartType(chartId) {
+  const chart = chartId === 'co2Chart' ? charts.co2 : 
+               chartId === 'tempChart' ? charts.temp : 
+               chartId === 'humidityChart' ? charts.humidity : 
+               charts.methane;
+  
+  const types = ['line', 'bar'];
+  const currentType = chartTypes[chartId];
+  const newType = types[(types.indexOf(currentType) + 1) % types.length];
+  
+  chartTypes[chartId] = newType;
+  
+  // Save the current data
+  const labels = chart.data.labels;
+  const data = chart.data.datasets[0].data;
+  const color = chart.data.datasets[0].borderColor;
+  
+  // Destroy and recreate the chart
+  chart.destroy();
+  
+  const newChart = new Chart(document.getElementById(chartId), {
+    type: newType,
+    data: {
+      labels: labels,
+      datasets: [{
+        label: chart.data.datasets[0].label,
+        data: data,
+        borderColor: color,
+        backgroundColor: newType === 'line' ? color + '33' : color,
+        tension: 0.3,
+        fill: newType === 'line',
+        pointRadius: newType === 'line' ? 3 : 0,
+        pointHoverRadius: newType === 'line' ? 5 : 0
+      }]
+    },
+    options: chart.options
+  });
+  
+  // Update the chart reference
+  if (chartId === 'co2Chart') charts.co2 = newChart;
+  else if (chartId === 'tempChart') charts.temp = newChart;
+  else if (chartId === 'humidityChart') charts.humidity = newChart;
+  else charts.methane = newChart;
+}
+
+function toggleChartFullscreen(chartId) {
+  const chartContainer = document.getElementById(chartId).parentElement;
+  
+  if (!document.fullscreenElement) {
+    if (chartContainer.requestFullscreen) {
+      chartContainer.requestFullscreen();
+    } else if (chartContainer.mozRequestFullScreen) { /* Firefox */
+      chartContainer.mozRequestFullScreen();
+    } else if (chartContainer.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+      chartContainer.webkitRequestFullscreen();
+    } else if (chartContainer.msRequestFullscreen) { /* IE/Edge */
+      chartContainer.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+function manualRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  btn.querySelector('i').classList.add('fa-spin');
+  
+  fetchData().then(() => {
+    btn.querySelector('i').classList.remove('fa-spin');
+    resetRefreshTimer();
+  });
+}
+
+function changeRefreshRate() {
+  const rate = parseInt(document.getElementById('refresh-rate').value);
+  
+  clearInterval(refreshInterval);
+  clearInterval(refreshCountdown);
+  
+  if (rate > 0) {
+    startRefreshTimer();
+  } else {
+    document.getElementById('refresh-countdown').textContent = 'Auto refresh: Off';
+  }
+}
+
+function startRefreshTimer() {
+  const rate = parseInt(document.getElementById('refresh-rate').value);
+  if (rate <= 0) return;
+  
+  let countdown = rate;
+  
+  document.getElementById('refresh-countdown').textContent = `Auto refresh in: ${countdown}s`;
+  
+  refreshCountdown = setInterval(() => {
+    countdown--;
+    document.getElementById('refresh-countdown').textContent = `Auto refresh in: ${countdown}s`;
+    
+    if (countdown <= 0) {
+      clearInterval(refreshCountdown);
+    }
+  }, 1000);
+  
+  refreshInterval = setInterval(() => {
+    fetchData().then(() => {
+      resetRefreshTimer();
+    });
+  }, rate * 1000);
+}
+
+function resetRefreshTimer() {
+  clearInterval(refreshCountdown);
+  clearInterval(refreshInterval);
+  startRefreshTimer();
+}
+
+function showAlert(message, type = 'danger') {
+  const alertContainer = document.getElementById('alerts');
+  const alertId = 'alert-' + Date.now();
+  
+  const alertDiv = document.createElement('div');
+  alertDiv.className = 'alert';
+  alertDiv.id = alertId;
+  alertDiv.style.borderLeftColor = type === 'danger' ? 'var(--danger-color)' : 'var(--warning-color)';
+  
+  alertDiv.innerHTML = `
+    <div class="alert-content">
+      <div class="alert-icon">
+        <i class="fas ${type === 'danger' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle'}"></i>
+      </div>
+      <div class="alert-message">${message}</div>
+    </div>
+    <div class="alert-close" onclick="dismissAlert('${alertId}')">
+      <i class="fas fa-times"></i>
+    </div>
+  `;
+  
+  alertContainer.appendChild(alertDiv);
+  
+  // Play alert sound
+  document.getElementById('alertSound').play();
+  
+  // Auto dismiss after 5 seconds
+  setTimeout(() => {
+    dismissAlert(alertId);
+  }, 5000);
+}
+
+function dismissAlert(alertId) {
+  const alert = document.getElementById(alertId);
+  if (alert) {
+    alert.style.opacity = '0';
+    setTimeout(() => {
+      alert.remove();
+    }, 300);
+  }
+}
+
+function showLoaders(show) {
+  const loaders = ['co2-loader', 'temp-loader', 'humidity-loader', 'methane-loader'];
+  loaders.forEach(id => {
+    document.getElementById(id).style.display = show ? 'flex' : 'none';
+  });
+}
+
+async function fetchData() {
+  showLoaders(true);
+  
+  const start = document.getElementById('start-date').value;
+  const end = document.getElementById('end-date').value;
+  
+  try {
+    const snapshot = await db.once('value');
+    const data = snapshot.val();
+    
+    if (!data) {
+      showLoaders(false);
+      showAlert('No data available from the database.');
+      return;
+    }
+    
+    const filteredData = {};
+    Object.keys(data).forEach(key => {
+      if ((!start || key >= start) && (!end || key <= end)) {
+        filteredData[key] = data[key];
+      }
+    });
+    
+    updateDashboard(filteredData);
+    showLoaders(false);
+    
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    showLoaders(false);
+    showAlert('Failed to fetch data from the server. Please try again later.');
+  }
+}
+
+function updateDashboard(data) {
+  if (!data || Object.keys(data).length === 0) {
+    showAlert('No data available for the selected date range.');
+    return;
+  }
+  
+  // Process the data
+  const timestamps = Object.keys(data).sort();
+  const processedData = [];
+  
+  const co2Values = [];
+  const tempValues = [];
+  const humidityValues = [];
+  const methaneValues = [];
+  const chartLabels = [];
+  
+  timestamps.forEach(ts => {
+    const entry = data[ts];
+    if (!entry) return;
+    
+    const shortLabel = ts.replace('T', ' ').slice(5, 16); // Format: MM-DD HH:MM
+    
+    chartLabels.push(shortLabel);
+    co2Values.push(entry.CO2 ?? 0);
+    tempValues.push(entry.temperature ?? 0);
+    humidityValues.push(entry.humidity ?? 0);
+    methaneValues.push(entry.methane ?? 0);
+    
+    processedData.push({
+      timestamp: ts,
+      co2: entry.CO2,
+      temperature: entry.temperature,
+      humidity: entry.humidity,
+      methane: entry.methane,
+      analogCH4: entry.analogvalues,
+      status: getStatus(entry.CO2, entry.methane)
+    });
+  });
+  
+  // Update charts
+  charts.co2.data.labels = chartLabels;
+  charts.temp.data.labels = chartLabels;
+  charts.humidity.data.labels = chartLabels;
+  charts.methane.data.labels = chartLabels;
+  
+  charts.co2.data.datasets[0].data = co2Values;
+  charts.temp.data.datasets[0].data = tempValues;
+  charts.humidity.data.datasets[0].data = humidityValues;
+  charts.methane.data.datasets[0].data = methaneValues;
+  
+  charts.co2.update();
+  charts.temp.update();
+  charts.humidity.update();
+  charts.methane.update();
+  
+  // Update status cards
+  updateStatusCards(co2Values, tempValues, humidityValues, methaneValues);
+  
+  // Update table
+  allData = processedData;
+  updatePaginatedData();
+  
+  // Check for alerts
+  checkAlerts(co2Values, methaneValues);
+}
+
+function getStatus(co2, methane) {
+  if (co2 > 1500 || methane > 1500) {
+    return 'danger';
+  } else if (co2 > 1000 || methane > 1000) {
+    return 'warning';
+  } else {
+    return 'normal';
+  }
+}
+
+function updateStatusCards(co2Values, tempValues, humidityValues, methaneValues) {
+  if (co2Values.length === 0) return;
+  
+  const lastIndex = co2Values.length - 1;
+  const currentCO2 = co2Values[lastIndex];
+  const currentTemp = tempValues[lastIndex];
+  const currentHumidity = humidityValues[lastIndex];
+  const currentMethane = methaneValues[lastIndex];
+  
+  document.getElementById('current-co2').textContent = currentCO2 ? `${currentCO2} ppm` : '--';
+  document.getElementById('current-temp').textContent = currentTemp ? `${currentTemp} °C` : '--';
+  document.getElementById('current-humidity').textContent = currentHumidity ? `${currentHumidity}%` : '--';
+  document.getElementById('current-methane').textContent = currentMethane ? `${currentMethane} ppm` : '--';
+  
+  // Calculate trends
+  if (co2Values.length > 1) {
+    const co2Trend = currentCO2 - co2Values[lastIndex - 1];
+    const tempTrend = currentTemp - tempValues[lastIndex - 1];
+    const humidityTrend = currentHumidity - humidityValues[lastIndex - 1];
+    const methaneTrend = currentMethane - methaneValues[lastIndex - 1];
+    
+    updateTrendDisplay('co2', co2Trend);
+    updateTrendDisplay('temp', tempTrend);
+    updateTrendDisplay('humidity', humidityTrend);
+    updateTrendDisplay('methane', methaneTrend);
+  }
+}
+
+function updateTrendDisplay(id, trend) {
+  const trendIcon = document.getElementById(`${id}-trend-icon`);
+  const trendText = document.getElementById(`${id}-trend`);
+  
+  if (Math.abs(trend) < 0.1) {
+    trendIcon.innerHTML = '<i class="fas fa-minus"></i>';
+    trendText.textContent = 'Stable';
+    trendText.style.color = 'var(--text-secondary)';
+  } else if (trend > 0) {
+    trendIcon.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    trendText.textContent = `+${trend.toFixed(1)}`;
+    trendText.style.color = 'var(--danger-color)';
+  } else {
+    trendIcon.innerHTML = '<i class="fas fa-arrow-down"></i>';
+    trendText.textContent = `${trend.toFixed(1)}`;
+    trendText.style.color = 'var(--success-color)';
+  }
+}
+
+function checkAlerts(co2Values, methaneValues) {
+  if (co2Values.length === 0) return;
+  
+  const currentCO2 = co2Values[co2Values.length - 1];
+  const currentMethane = methaneValues[methaneValues.length - 1];
+  
+  if (currentCO2 > 1500) {
+    showAlert(`High CO2 level detected: ${currentCO2} ppm`, 'danger');
+  } else if (currentCO2 > 1000) {
+    showAlert(`Elevated CO2 level: ${currentCO2} ppm`, 'warning');
+  }
+  
+  if (currentMethane > 1500) {
+    showAlert(`High Methane level detected: ${currentMethane} ppm`, 'danger');
+  } else if (currentMethane > 1000) {
+    showAlert(`Elevated Methane level: ${currentMethane} ppm`, 'warning');
+  }
+}
+
+function updatePaginatedData() {
+  if (allData.length === 0) return;
+  
+  // Sort data if needed
+  if (sortColumn) {
+    allData.sort((a, b) => {
+      const aValue = a[sortColumn];
+      const bValue = b[sortColumn];
+      
+      if (aValue === bValue) return 0;
+      
+      const result = aValue < bValue ? -1 : 1;
+      return sortDirection === 'asc' ? result : -result;
+    });
+  }
+  
+  // Calculate pagination
+  const totalItems = allData.length;
+  const totalPages = Math.ceil(totalItems / rowsPerPage);
+  
+  document.getElementById('total-items').textContent = totalItems;
+  document.getElementById('total-pages').textContent = totalPages;
+  document.getElementById('current-page').textContent = currentPage;
+  
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
+  
+  document.getElementById('page-start').textContent = startIndex + 1;
+  document.getElementById('page-end').textContent = endIndex;
+  
+  // Enable/disable pagination buttons
+  document.getElementById('prev-page').disabled = currentPage === 1;
+  document.getElementById('next-page').disabled = currentPage === totalPages;
+  
+  // Get data for current page
+  paginatedData = allData.slice(startIndex, endIndex);
+  
+  // Update table
+  updateTable();
+}
+
+function updateTable() {
+  const tbody = document.getElementById('data-table');
+  tbody.innerHTML = '';
+  
+  paginatedData.forEach(item => {
+    const statusClass = item.status === 'danger' ? 'status-danger' : 
+                       item.status === 'warning' ? 'status-warning' : 
+                       'status-normal';
+    
+    const formattedTimestamp = item.timestamp.replace('T', ' ');
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${formattedTimestamp}</td>
+      <td>${item.co2 ?? 'N/A'}</td>
+      <td>${item.temperature ?? 'N/A'}</td>
+      <td>${item.humidity ?? 'N/A'}</td>
+      <td>${item.methane ?? 'N/A'}</td>
+      <td><span class="status-indicator ${statusClass}"></span>${item.status}</td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+}
+
+function sortTable(column) {
+  if (sortColumn === column) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn = column;
+    sortDirection = 'asc';
+  }
+  
+  updatePaginatedData();
+}
+
+function exportToCSV() {
+  if (allData.length === 0) {
+    showAlert('No data available to export.');
+    return;
+  }
+  
+  const csvHeader = 'Timestamp,CO2 (ppm),Temperature (°C),Humidity (%),Methane (ppm),Analog CH4\n';
+  let csvContent = csvHeader;
+  
+  allData.forEach(item => {
+    csvContent += `${item.timestamp},${item.co2 ?? ''},${item.temperature ?? ''},${item.humidity ?? ''},${item.methane ?? ''},${item.analogCH4 ?? ''}\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const filename = `co2-data-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  
+  if (navigator.msSaveBlob) { // IE 10+
+    navigator.msSaveBlob(blob, filename);
+  } else {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  
+  showAlert('Data exported successfully!', 'success');
+}
+
+// Real-time data listener
+function setupRealtimeListeners() {
+  // Listen for the most recent data point
+  db.orderByKey().limitToLast(1).on('child_added', snapshot => {
+    const key = snapshot.key;
+    const newData = snapshot.val();
+    
+    // Check if this is actually new data
+    const existingKeys = allData.map(item => item.timestamp);
+    if (existingKeys.includes(key)) return;
+    
+    // Add to all data array
+    allData.push({
+      timestamp: key,
+      co2: newData.CO2,
+      temperature: newData.temperature,
+      humidity: newData.humidity,
+      methane: newData.methane,
+      analogCH4: newData.analogvalues,
+      status: getStatus(newData.CO2, newData.methane)
+    });
+    
+    // Keep data array sorted
+    allData.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    
+    // Update charts with new data point
+    updateChartsWithNewData(key, newData);
+    
+    // Update status cards
+    const co2Values = allData.map(item => item.co2);
+    const tempValues = allData.map(item => item.temperature);
+    const humidityValues = allData.map(item => item.humidity);
+    const methaneValues = allData.map(item => item.methane);
+    
+    updateStatusCards(co2Values, tempValues, humidityValues, methaneValues);
+    
+    // Update table if viewing the latest data
+    if (currentPage === 1 && sortColumn === 'timestamp' && sortDirection === 'desc') {
+      updatePaginatedData();
+    }
+    
+    // Check for alerts
+    checkAlerts([newData.CO2], [newData.methane]);
+  });
+}
+
+function updateChartsWithNewData(timestamp, newData) {
+  const shortLabel = timestamp.replace('T', ' ').slice(5, 16); // Format: MM-DD HH:MM
+  
+  // Add new data point to each chart
+  addDataPointToChart(charts.co2, shortLabel, newData.CO2);
+  addDataPointToChart(charts.temp, shortLabel, newData.temperature);
+  addDataPointToChart(charts.humidity, shortLabel, newData.humidity);
+  addDataPointToChart(charts.methane, shortLabel, newData.methane);
+}
+
+function addDataPointToChart(chart, label, value) {
+  chart.data.labels.push(label);
+  chart.data.datasets[0].data.push(value);
+  
+  // Remove oldest data point if we have more than 100 points
+  if (chart.data.labels.length > 100) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  
+  chart.update();
+}
+
+// Data visualization utilities
+function calculateStats(dataArray) {
+  if (!dataArray || dataArray.length === 0) return { min: 0, max: 0, avg: 0 };
+  
+  const filteredData = dataArray.filter(val => val !== null && val !== undefined);
+  if (filteredData.length === 0) return { min: 0, max: 0, avg: 0 };
+  
+  const min = Math.min(...filteredData);
+  const max = Math.max(...filteredData);
+  const sum = filteredData.reduce((a, b) => a + b, 0);
+  const avg = sum / filteredData.length;
+  
+  return { min, max, avg };
+}
+
+function analyzeData() {
+  const co2Values = allData.map(item => item.co2).filter(Boolean);
+  const tempValues = allData.map(item => item.temperature).filter(Boolean);
+  const humidityValues = allData.map(item => item.humidity).filter(Boolean);
+  const methaneValues = allData.map(item => item.methane).filter(Boolean);
+  
+  const co2Stats = calculateStats(co2Values);
+  const tempStats = calculateStats(tempValues);
+  const humidityStats = calculateStats(humidityValues);
+  const methaneStats = calculateStats(methaneValues);
+  
+  const dangerCount = allData.filter(item => item.status === 'danger').length;
+  const warningCount = allData.filter(item => item.status === 'warning').length;
+  
+  const totalReadings = allData.length;
+  const warningPercentage = (warningCount / totalReadings) * 100;
+  const dangerPercentage = (dangerCount / totalReadings) * 100;
+  
+  showAnalysisDialog({
+    co2: co2Stats,
+    temperature: tempStats,
+    humidity: humidityStats,
+    methane: methaneStats,
+    warnings: {
+      count: warningCount,
+      percentage: warningPercentage.toFixed(1)
+    },
+    dangers: {
+      count: dangerCount,
+      percentage: dangerPercentage.toFixed(1)
+    },
+    total: totalReadings
+  });
+}
+
+function showAnalysisDialog(stats) {
+  // Create modal dynamically
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.7)';
+  modal.style.zIndex = '1000';
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  
+  const modalContent = document.createElement('div');
+  modalContent.style.backgroundColor = 'var(--card-bg)';
+  modalContent.style.borderRadius = 'var(--border-radius)';
+  modalContent.style.maxWidth = '600px';
+  modalContent.style.width = '90%';
+  modalContent.style.maxHeight = '90%';
+  modalContent.style.overflow = 'auto';
+  modalContent.style.padding = '2rem';
+  modalContent.style.color = 'var(--text-primary)';
+  
+  modalContent.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2 style="margin: 0;">Data Analysis</h2>
+      <button id="close-analysis" style="background: none; border: none; cursor: pointer; font-size: 1.5rem; color: var(--text-secondary);">×</button>
+    </div>
+    <div style="margin-bottom: 1rem;">
+      <p>Total readings: <strong>${stats.total}</strong></p>
+      <p>Warning events: <strong>${stats.warnings.count}</strong> (${stats.warnings.percentage}%)</p>
+      <p>Danger events: <strong>${stats.dangers.count}</strong> (${stats.dangers.percentage}%)</p>
+    </div>
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="text-align: left; padding: 0.5rem;">Metric</th>
+          <th style="text-align: right; padding: 0.5rem;">Min</th>
+          <th style="text-align: right; padding: 0.5rem;">Max</th>
+          <th style="text-align: right; padding: 0.5rem;">Average</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 0.5rem;">CO2 (ppm)</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.co2.min.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.co2.max.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.co2.avg.toFixed(1)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 0.5rem;">Temperature (°C)</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.temperature.min.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.temperature.max.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.temperature.avg.toFixed(1)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 0.5rem;">Humidity (%)</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.humidity.min.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.humidity.max.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.humidity.avg.toFixed(1)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 0.5rem;">Methane (ppm)</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.methane.min.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.methane.max.toFixed(1)}</td>
+          <td style="text-align: right; padding: 0.5rem;">${stats.methane.avg.toFixed(1)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top: 1.5rem; text-align: center;">
+      <button id="generate-report" class="btn btn-primary">
+        <i class="fas fa-file-alt"></i> Generate Report
+      </button>
+    </div>
+  `;
+  
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
+  
+  // Add event listeners
+  document.getElementById('close-analysis').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+  
+  document.getElementById('generate-report').addEventListener('click', () => {
+    generatePDFReport(stats);
+  });
+}
+
+function generatePDFReport(stats) {
+  // This would typically use a library like jsPDF
+  // For now, we'll just alert the user
+  alert('PDF report generation would be implemented here.');
+  
+  // Placeholder for PDF generation code
+  const reportData = {
+    title: 'CO2 Monitoring System Report',
+    date: new Date().toLocaleString(),
+    stats: stats
+  };
+  
+  console.log('Report data:', reportData);
+}
+
+// Mobile responsiveness enhancement
+function setupResponsiveUI() {
+  const handleResize = () => {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Adjust chart options for mobile
+      Object.values(charts).forEach(chart => {
+        chart.options.scales.x.ticks.maxTicksLimit = 5;
+        chart.update();
+      });
+      
+      // Other mobile-specific adjustments
+      document.querySelectorAll('.status-card-value').forEach(el => {
+        el.style.fontSize = '1.5rem';
+      });
+    } else {
+      // Reset to desktop view
+      Object.values(charts).forEach(chart => {
+        chart.options.scales.x.ticks.maxTicksLimit = 8;
+        chart.update();
+      });
+      
+      document.querySelectorAll('.status-card-value').forEach(el => {
+        el.style.fontSize = '2rem';
       });
     }
+  };
+  
+  // Initial call and event listener
+  handleResize();
+  window.addEventListener('resize', handleResize);
+}
 
-    function updateChartsAndTable(data) {
-      const tbody = document.getElementById('data-table');
-      tbody.innerHTML = '';
-      let labels = [], co2 = [], temp = [], humidity = [], methane = [], csv = [];
+// Add notification support
+function setupNotifications() {
+  // Check if browser supports notifications
+  if (!("Notification" in window)) {
+    console.log("This browser does not support desktop notifications");
+    return;
+  }
+  
+  // Check if permission is already granted
+  if (Notification.permission === "granted") {
+    console.log("Notification permission already granted");
+  } else if (Notification.permission !== "denied") {
+    // Create notification permission button
+    const notifyBtn = document.createElement('button');
+    notifyBtn.className = 'btn-icon tooltip';
+    notifyBtn.innerHTML = '<i class="fas fa-bell"></i><span class="tooltiptext">Enable Notifications</span>';
+    notifyBtn.onclick = requestNotificationPermission;
+    
+    document.querySelector('.header-actions').prepend(notifyBtn);
+  }
+}
 
-      const keys = Object.keys(data).sort();
-      keys.forEach(ts => {
-        const e = data[ts];
-        if (!e) return;
-
-        const shortLabel = ts.replace('T', ' ').slice(5, 16); // example: "04-10 10:25"
-
-        labels.push(shortLabel);
-        co2.push(e.CO2 ?? 0);
-        temp.push(e.temperature ?? 0);
-        humidity.push(e.humidity ?? 0);
-        methane.push(e.methane ?? 0);
-
-        const row = `
-          <tr>
-            <td>${ts}</td>
-            <td>${e.CO2 ?? 'N/A'}</td>
-            <td>${e.temperature ?? 'N/A'}</td>
-            <td>${e.humidity ?? 'N/A'}</td>
-            <td>${e.methane ?? 'N/A'}</td>
-            <td>${e.analogvalues ?? 'N/A'}</td>
-          </tr>
-        `;
-        tbody.innerHTML += row;
-
-        csv.push([ts, e.CO2, e.temperature, e.humidity, e.methane, e.analogvalues]);
-
-        if (e.CO2 > 1000 || e.methane > 1000) {
-          document.getElementById('alertSound').play();
-        }
-      });
-
-      charts.co2.data.labels =
-      charts.temp.data.labels =
-      charts.humidity.data.labels =
-      charts.methane.data.labels = labels;
-
-      charts.co2.data.datasets[0].data = co2;
-      charts.temp.data.datasets[0].data = temp;
-      charts.humidity.data.datasets[0].data = humidity;
-      charts.methane.data.datasets[0].data = methane;
-
-      Object.values(charts).forEach(chart => chart.update());
-      window.csvData = csv;
+function requestNotificationPermission() {
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      showAlert("Notifications enabled successfully!", "success");
     }
+  });
+}
 
-    function fetchData() {
-      db.once('value', snap => {
-        const data = snap.val();
-        if (!data) return;
+function sendNotification(title, body) {
+  if (Notification.permission === "granted") {
+    const notification = new Notification(title, {
+      body: body,
+      icon: "https://upload.wikimedia.org/wikipedia/commons/1/19/Carbon_dioxide_icon.png"
+    });
+    
+    notification.onclick = function() {
+      window.focus();
+      this.close();
+    };
+  }
+}
 
-        const start = document.getElementById('start-date').value;
-        const end = document.getElementById('end-date').value;
-        const filtered = {};
+// Add analysis button to the controls div
+function addAnalysisButton() {
+  const analyzeBtn = document.createElement('button');
+  analyzeBtn.className = 'btn btn-primary';
+  analyzeBtn.innerHTML = '<i class="fas fa-chart-pie"></i> Analyze Data';
+  analyzeBtn.onclick = analyzeData;
+  
+  document.querySelector('.controls').appendChild(analyzeBtn);
+}
 
-        Object.keys(data).forEach(key => {
-          if ((!start || key >= start) && (!end || key <= end)) {
-            filtered[key] = data[key];
-          }
-        });
-
-        updateChartsAndTable(filtered);
-      });
+// Initialize additional features
+document.addEventListener('DOMContentLoaded', function() {
+  setupRealtimeListeners();
+  setupResponsiveUI();
+  setupNotifications();
+  addAnalysisButton();
+  
+  // Add keyboard shortcuts
+  document.addEventListener('keydown', function(event) {
+    // Refresh data with F5 or Ctrl+R
+    if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+      event.preventDefault();
+      manualRefresh();
     }
-
-    function exportToCSV() {
-      let csvContent = "Timestamp,CO2,Temperature,Humidity,Methane,AnalogCH4\n";
-      (window.csvData || []).forEach(row => {
-        csvContent += row.join(",") + "\n";
-      });
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      saveAs(blob, "data-export.csv");
+    
+    // Toggle dark mode with Ctrl+D
+    if (event.ctrlKey && event.key === 'd') {
+      event.preventDefault();
+      document.getElementById('theme-toggle').click();
     }
-
-    document.getElementById('start-date').addEventListener('change', fetchData);
-    document.getElementById('end-date').addEventListener('change', fetchData);
-
-    fetchData();
-  </script>
-</body>
-</html>
+  });
+});
