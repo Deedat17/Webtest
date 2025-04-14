@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CO2 Monitoring Dashboard</title>
+  <title>Environmental Monitoring Dashboard</title>
   <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/1/19/Carbon_dioxide_icon.png" />
 
   <!-- Firebase & Libraries - Load only what's needed -->
@@ -20,6 +20,8 @@
       --success: #38b000;
       --warning: #ffbe0b;
       --danger: #ff006e;
+      --info: #00b4d8;
+      --soil: #8f6543;
       --dark: #222222;
       --light: #f5f5f5;
       --card-bg: #ffffff;
@@ -304,6 +306,37 @@
       align-items: center;
       gap: 5px;
     }
+
+    .tab-controls {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
   
     @media (max-width: 768px) {
       .charts-grid {
@@ -324,7 +357,7 @@
 <body>
   <div class="dashboard">
     <div class="dashboard-header">
-      <h1>CO2 Monitoring Dashboard</h1>
+      <h1>Environmental Monitoring Dashboard</h1>
     </div>
     
     <div class="status-bar">
@@ -346,72 +379,162 @@
       <button id="export-btn" class="btn btn-export"><i class="bi bi-download"></i> <span>Export CSV</span></button>
     </div>
     
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-title">CO2 Level (Latest)</div>
-        <div id="co2-latest" class="stat-value">-- ppm</div>
-        <div class="stat-footer">
-          <i class="bi bi-arrow-up"></i>
-          <span id="co2-change">--</span>
+    <div class="tab-controls">
+      <button class="tab-btn active" data-tab="atmosphere">Atmosphere</button>
+      <button class="tab-btn" data-tab="soil">Soil</button>
+    </div>
+    
+    <div id="atmosphere-tab" class="tab-content active">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-title">CO2 Level (Latest)</div>
+          <div id="co2-latest" class="stat-value">-- ppm</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="co2-change">--</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Temperature (Latest)</div>
+          <div id="temp-latest" class="stat-value">-- °C</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-down"></i>
+            <span id="temp-change">--</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Humidity (Latest)</div>
+          <div id="humidity-latest" class="stat-value">-- %</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="humidity-change">--</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Methane (Latest)</div>
+          <div id="methane-latest" class="stat-value">-- ppm</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="methane-change">--</span>
+          </div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-title">Temperature (Latest)</div>
-        <div id="temp-latest" class="stat-value">-- °C</div>
-        <div class="stat-footer">
-          <i class="bi bi-arrow-down"></i>
-          <span id="temp-change">--</span>
+      
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="bi bi-cloud-fill"></i> CO2 Level</div>
+          </div>
+          <div class="chart-body">
+            <canvas id="co2Chart"></canvas>
+          </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-title">Humidity (Latest)</div>
-        <div id="humidity-latest" class="stat-value">-- %</div>
-        <div class="stat-footer">
-          <i class="bi bi-arrow-up"></i>
-          <span id="humidity-change">--</span>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="bi bi-thermometer-half"></i> Temperature</div>
+          </div>
+          <div class="chart-body">
+            <canvas id="tempChart"></canvas>
+          </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-title">Methane (Latest)</div>
-        <div id="methane-latest" class="stat-value">-- ppm</div>
-        <div class="stat-footer">
-          <i class="bi bi-arrow-up"></i>
-          <span id="methane-change">--</span>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="bi bi-droplet-fill"></i> Humidity</div>
+          </div>
+          <div class="chart-body">
+            <canvas id="humidityChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="bi bi-fuel-pump-fill"></i> Methane</div>
+          </div>
+          <div class="chart-body">
+            <canvas id="methaneChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
     
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title"><i class="bi bi-cloud-fill"></i> CO2 Level</div>
+    <div id="soil-tab" class="tab-content">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-title">Soil Moisture 1 (Latest)</div>
+          <div id="soilMoisture1-latest" class="stat-value">-- %</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="soilMoisture1-change">--</span>
+          </div>
         </div>
-        <div class="chart-body">
-          <canvas id="co2Chart"></canvas>
+        <div class="stat-card">
+          <div class="stat-title">Soil Moisture 2 (Latest)</div>
+          <div id="soilMoisture2-latest" class="stat-value">-- %</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-down"></i>
+            <span id="soilMoisture2-change">--</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Soil Moisture 3 (Latest)</div>
+          <div id="soilMoisture3-latest" class="stat-value">-- %</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="soilMoisture3-change">--</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Soil Temp 1 (Latest)</div>
+          <div id="soilTemp1-latest" class="stat-value">-- °C</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="soilTemp1-change">--</span>
+          </div>
         </div>
       </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title"><i class="bi bi-thermometer-half"></i> Temperature</div>
+      
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-title">Soil Temp 2 (Latest)</div>
+          <div id="soilTemp2-latest" class="stat-value">-- °C</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="soilTemp2-change">--</span>
+          </div>
         </div>
-        <div class="chart-body">
-          <canvas id="tempChart"></canvas>
+        <div class="stat-card">
+          <div class="stat-title">Soil Temp 3 (Latest)</div>
+          <div id="soilTemp3-latest" class="stat-value">-- °C</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="soilTemp3-change">--</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Methane Analog (Latest)</div>
+          <div id="methaneAnalog-latest" class="stat-value">--</div>
+          <div class="stat-footer">
+            <i class="bi bi-arrow-up"></i>
+            <span id="methaneAnalog-change">--</span>
+          </div>
         </div>
       </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title"><i class="bi bi-droplet-fill"></i> Humidity</div>
+      
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="bi bi-moisture"></i> Soil Moisture</div>
+          </div>
+          <div class="chart-body">
+            <canvas id="soilMoistureChart"></canvas>
+          </div>
         </div>
-        <div class="chart-body">
-          <canvas id="humidityChart"></canvas>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title"><i class="bi bi-fuel-pump-fill"></i> Methane</div>
-        </div>
-        <div class="chart-body">
-          <canvas id="methaneChart"></canvas>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title"><i class="bi bi-thermometer-half"></i> Soil Temperature</div>
+          </div>
+          <div class="chart-body">
+            <canvas id="soilTempChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
@@ -427,10 +550,16 @@
             <tr>
               <th>Timestamp</th>
               <th>CO2 (ppm)</th>
-              <th>Temperature (°C)</th>
+              <th>Temp (°C)</th>
               <th>Humidity (%)</th>
               <th>Methane (ppm)</th>
-              <th>Analog CH4</th>
+              <th>Methane Analog</th>
+              <th>Soil Moisture 1 (%)</th>
+              <th>Soil Moisture 2 (%)</th>
+              <th>Soil Moisture 3 (%)</th>
+              <th>Soil Temp 1 (°C)</th>
+              <th>Soil Temp 2 (°C)</th>
+              <th>Soil Temp 3 (°C)</th>
             </tr>
           </thead>
           <tbody id="data-table"></tbody>
@@ -471,7 +600,7 @@
     }
     
     // Create a chart with optimized options
-    function createChart(id, label, color) {
+    function createChart(id, label, color, type = 'line') {
       const ctx = document.getElementById(id).getContext('2d');
       
       // Create gradient background
@@ -479,8 +608,8 @@
       gradient.addColorStop(0, color + '33');
       gradient.addColorStop(1, color + '03');
       
-      return new Chart(ctx, {
-        type: 'line',
+      const config = {
+        type: type,
         data: {
           labels: [],
           datasets: [{
@@ -558,7 +687,88 @@
             mode: 'index'
           }
         }
-      });
+      };
+      
+      // For multi-line charts, add additional datasets
+      if (id === 'soilMoistureChart') {
+        config.data.datasets = [
+          {
+            label: 'Moisture 1',
+            data: [],
+            borderColor: '#3a86ff',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5
+          },
+          {
+            label: 'Moisture 2',
+            data: [],
+            borderColor: '#8338ec',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5
+          },
+          {
+            label: 'Moisture 3',
+            data: [],
+            borderColor: '#38b000',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5
+          }
+        ];
+        config.options.plugins.legend.display = true;
+      }
+      
+      if (id === 'soilTempChart') {
+        config.data.datasets = [
+          {
+            label: 'Temp 1',
+            data: [],
+            borderColor: '#ff006e',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5
+          },
+          {
+            label: 'Temp 2',
+            data: [],
+            borderColor: '#ffbe0b',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5
+          },
+          {
+            label: 'Temp 3',
+            data: [],
+            borderColor: '#00b4d8',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5
+          }
+        ];
+        config.options.plugins.legend.display = true;
+      }
+      
+      return new Chart(ctx, config);
     }
     
     // Initialize charts
@@ -567,7 +777,9 @@
         co2: createChart('co2Chart', 'CO2 (ppm)', '#3a86ff'),
         temp: createChart('tempChart', 'Temperature (°C)', '#38b000'),
         humidity: createChart('humidityChart', 'Humidity (%)', '#ffbe0b'),
-        methane: createChart('methaneChart', 'Methane (ppm)', '#ff006e')
+        methane: createChart('methaneChart', 'Methane (ppm)', '#ff006e'),
+        soilMoisture: createChart('soilMoistureChart', 'Soil Moisture (%)', '#3a86ff'),
+        soilTemp: createChart('soilTempChart', 'Soil Temperature (°C)', '#38b000')
       };
     }
     
@@ -674,475 +886,337 @@
       const prevKey = sortedKeys.length > 1 ? sortedKeys[sortedKeys.length - 2] : null;
       const prevData = prevKey ? data[prevKey] : null;
       
-      // Update stat cards
+      // Update atmospheric stat cards
       document.getElementById('co2-latest').textContent = 
         (latestData.CO2 !== undefined ? latestData.CO2 : '--') + ' ppm';
       
       document.getElementById('temp-latest').textContent = 
         (latestData.temperature !== undefined ? latestData.temperature : '--') + ' °C';
       
-      document.getElementById('humidity-latest').textContent = 
+        document.getElementById('humidity-latest').textContent = 
         (latestData.humidity !== undefined ? latestData.humidity : '--') + ' %';
       
       document.getElementById('methane-latest').textContent = 
         (latestData.methane !== undefined ? latestData.methane : '--') + ' ppm';
       
-      // Calculate changes if we have previous data
+      // Update soil stat cards
+      document.getElementById('soilMoisture1-latest').textContent = 
+        (latestData.soilMoisture1 !== undefined ? latestData.soilMoisture1 : '--') + ' %';
+      
+      document.getElementById('soilMoisture2-latest').textContent = 
+        (latestData.soilMoisture2 !== undefined ? latestData.soilMoisture2 : '--') + ' %';
+      
+      document.getElementById('soilMoisture3-latest').textContent = 
+        (latestData.soilMoisture3 !== undefined ? latestData.soilMoisture3 : '--') + ' %';
+      
+      document.getElementById('soilTemp1-latest').textContent = 
+        (latestData.soilTemp1 !== undefined ? latestData.soilTemp1 : '--') + ' °C';
+      
+      document.getElementById('soilTemp2-latest').textContent = 
+        (latestData.soilTemp2 !== undefined ? latestData.soilTemp2 : '--') + ' °C';
+      
+      document.getElementById('soilTemp3-latest').textContent = 
+        (latestData.soilTemp3 !== undefined ? latestData.soilTemp3 : '--') + ' °C';
+      
+      document.getElementById('methaneAnalog-latest').textContent = 
+        (latestData.methaneAnalog !== undefined ? latestData.methaneAnalog : '--');
+      
+      // Calculate and show changes
       if (prevData) {
-        // CO2 change
-        const co2Change = latestData.CO2 - prevData.CO2;
-        const co2Element = document.getElementById('co2-change');
-        co2Element.textContent = Math.abs(co2Change).toFixed(2) + ' ppm';
-        co2Element.previousElementSibling.className = 
-          co2Change >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-        
-        // Temperature change
-        const tempChange = latestData.temperature - prevData.temperature;
-        const tempElement = document.getElementById('temp-change');
-        tempElement.textContent = Math.abs(tempChange).toFixed(2) + ' °C';
-        tempElement.previousElementSibling.className = 
-          tempChange >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-        
-        // Humidity change
-        const humidityChange = latestData.humidity - prevData.humidity;
-        const humidityElement = document.getElementById('humidity-change');
-        humidityElement.textContent = Math.abs(humidityChange).toFixed(2) + ' %';
-        humidityElement.previousElementSibling.className = 
-          humidityChange >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-        
-        // Methane change
-        const methaneChange = latestData.methane - prevData.methane;
-        const methaneElement = document.getElementById('methane-change');
-        methaneElement.textContent = Math.abs(methaneChange).toFixed(2) + ' ppm';
-        methaneElement.previousElementSibling.className = 
-          methaneChange >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+        updateChangeIndicator('co2', latestData.CO2, prevData.CO2);
+        updateChangeIndicator('temp', latestData.temperature, prevData.temperature);
+        updateChangeIndicator('humidity', latestData.humidity, prevData.humidity);
+        updateChangeIndicator('methane', latestData.methane, prevData.methane);
+        updateChangeIndicator('soilMoisture1', latestData.soilMoisture1, prevData.soilMoisture1);
+        updateChangeIndicator('soilMoisture2', latestData.soilMoisture2, prevData.soilMoisture2);
+        updateChangeIndicator('soilMoisture3', latestData.soilMoisture3, prevData.soilMoisture3);
+        updateChangeIndicator('soilTemp1', latestData.soilTemp1, prevData.soilTemp1);
+        updateChangeIndicator('soilTemp2', latestData.soilTemp2, prevData.soilTemp2);
+        updateChangeIndicator('soilTemp3', latestData.soilTemp3, prevData.soilTemp3);
+        updateChangeIndicator('methaneAnalog', latestData.methaneAnalog, prevData.methaneAnalog);
       }
     }
     
-    // Process data and update UI
-    function processData(data) {
-      // Prepare data
-      let labels = [], co2 = [], temp = [], humidity = [], methane = [];
-      csvData = []; // Reset CSV data
+    // Helper function to update change indicators
+    function updateChangeIndicator(id, current, previous) {
+      if (current === undefined || previous === undefined) return;
       
-      // Get sorted keys for consistent ordering
-      const keys = Object.keys(data).sort();
+      const change = current - previous;
+      const changePercent = previous !== 0 ? ((change / previous) * 100).toFixed(1) : '0.0';
+      const element = document.getElementById(`${id}-change`);
+      const iconElement = element.previousElementSibling;
       
-      // Quick check if we have too many data points
-      const dataCount = keys.length;
-      if (dataCount === 0) {
-        showAlert('No data available for the selected date range');
-        document.getElementById('records-count').textContent = '0 records';
-        return;
-      }
+      element.textContent = `${changePercent}%`;
       
-      // For very large datasets, sample the data
-      const sampleRate = dataCount > 1000 ? Math.ceil(dataCount / 1000) : 1;
-      
-      // Batch DOM operations for table
-      const tbody = document.getElementById('data-table');
-      tbody.innerHTML = ''; // Clear table
-      
-      // Create document fragment for better performance
-      const fragment = document.createDocumentFragment();
-      
-      // Process data points
-      keys.forEach((ts, index) => {
-        // Skip for large datasets based on sample rate for charts
-        const isChartPoint = sampleRate === 1 || index % sampleRate === 0 || index === keys.length - 1;
-        
-        const e = data[ts];
-        if (!e) return;
-        
-        // Format timestamp for display
-        const shortLabel = ts.replace('T', ' ').slice(5, 16);
-        
-        // Add to chart data if it's a chart point
-        if (isChartPoint) {
-          labels.push(shortLabel);
-          co2.push(e.CO2 ?? 0);
-          temp.push(e.temperature ?? 0);
-          humidity.push(e.humidity ?? 0);
-          methane.push(e.methane ?? 0);
-        }
-        
-        // Add to CSV data
-        csvData.push([ts, e.CO2, e.temperature, e.humidity, e.methane, e.analogvalues]);
-        
-        // For really large datasets, don't show every point in the table
-        if (dataCount > 200 && index % Math.ceil(dataCount / 200) !== 0 && index !== keys.length - 1) {
-          return;
-        }
-        
-        // Create table row
-        const row = document.createElement('tr');
-        
-        // Add cells
-        [
-          ts,
-          e.CO2 ?? 'N/A',
-          e.temperature ?? 'N/A',
-          e.humidity ?? 'N/A',
-          e.methane ?? 'N/A',
-          e.analogvalues ?? 'N/A'
-        ].forEach(value => {
-          const cell = document.createElement('td');
-          cell.textContent = value;
-          row.appendChild(cell);
-        });
-        
-        fragment.appendChild(row);
-      });
-      
-      // Add all rows at once
-      tbody.appendChild(fragment);
-      
-      // Update chart data all at once
-      charts.co2.data.labels = 
-      charts.temp.data.labels = 
-      charts.humidity.data.labels = 
-      charts.methane.data.labels = labels;
-      
-      charts.co2.data.datasets[0].data = co2;
-      charts.temp.data.datasets[0].data = temp;
-      charts.humidity.data.datasets[0].data = humidity;
-      charts.methane.data.datasets[0].data = methane;
-      
-      // Update all charts without animations
-      Object.values(charts).forEach(chart => chart.update(0));
-      
-      // Update stats
-      updateStats(data);
-      
-      // Update record counter
-      document.getElementById('records-count').textContent = `${dataCount} records found`;
-    }
-    // Show/hide loading indicator
-    function setLoading(isLoading) {
-      appState.isLoading = isLoading;
-      const statusIndicator = document.getElementById('status-indicator');
-      const loadingIndicator = document.getElementById('loading-indicator');
-      
-      if (isLoading) {
-        statusIndicator.classList.add('loading');
-        loadingIndicator.textContent = 'Fetching data...';
+      if (change > 0) {
+        iconElement.className = 'bi bi-arrow-up';
+        iconElement.style.color = 'var(--danger)';
+      } else if (change < 0) {
+        iconElement.className = 'bi bi-arrow-down';
+        iconElement.style.color = 'var(--success)';
       } else {
-        statusIndicator.classList.remove('loading');
-        loadingIndicator.textContent = 'Connected';
-      }
-      
-      // Also disable refresh button while loading
-      document.getElementById('refresh-btn').disabled = isLoading;
-    }
-    
-    // Show alert message
-    function showAlert(message, autoHide = true) {
-      const alertEl = document.getElementById('alert-message');
-      alertEl.textContent = message;
-      
-      if (autoHide) {
-        setTimeout(() => {
-          alertEl.textContent = '';
-        }, 3000);
+        iconElement.className = 'bi bi-dash';
+        iconElement.style.color = 'var(--info)';
       }
     }
     
-    // Update last refresh time
-    function updateLastRefresh() {
-      const now = new Date();
-      const options = { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      };
-      document.getElementById('last-update').textContent = 
-        'Last update: ' + now.toLocaleDateString('en-US', options);
-    }
-    
-    // Fetch data from Firebase
-    function fetchData() {
-      // Prevent multiple fetches
-      if (appState.isLoading) return;
-      
-      setLoading(true);
-      
-      // Get date filters
-      const startDate = document.getElementById('start-date').value;
-      const endDate = document.getElementById('end-date').value;
-      
-      // Fetch once from Firebase
-      dbRef.once('value')
-        .then(snapshot => {
-          const data = snapshot.val();
-          
-          if (!data) {
-            setLoading(false);
-            showAlert('No data available');
-            return;
-          }
-          
-          // Filter by date if needed
-          const filtered = {};
-          Object.keys(data).forEach(key => {
-            if ((!startDate || key >= startDate) && (!endDate || key <= endDate + 'T23:59:59')) {
-              filtered[key] = data[key];
-            }
-          });
-          
-          appState.lastFetch = new Date();
-          appState.lastData = filtered;
-          
-          // Process and update UI
-          processData(filtered);
-          setLoading(false);
-          updateLastRefresh();
-        })
-        .catch(error => {
-          console.error('Error fetching data:', error);
-          setLoading(false);
-          showAlert('Failed to fetch data: ' + error.message);
-        });
-    }
-    
-    // Update stats cards
-    function updateStats(data) {
-      if (!data || Object.keys(data).length === 0) return;
-      
-      // Get latest data point
-      const sortedKeys = Object.keys(data).sort();
-      const latestKey = sortedKeys[sortedKeys.length - 1];
-      const latestData = data[latestKey];
-      
-      // Get previous data point (for change calculation)
-      const prevKey = sortedKeys.length > 1 ? sortedKeys[sortedKeys.length - 2] : null;
-      const prevData = prevKey ? data[prevKey] : null;
-      
-      // Update stat cards
-      document.getElementById('co2-latest').textContent = 
-        (latestData.CO2 !== undefined ? latestData.CO2 : '--') + ' ppm';
-      
-      document.getElementById('temp-latest').textContent = 
-        (latestData.temperature !== undefined ? latestData.temperature : '--') + ' °C';
-      
-      document.getElementById('humidity-latest').textContent = 
-        (latestData.humidity !== undefined ? latestData.humidity : '--') + ' %';
-      
-      document.getElementById('methane-latest').textContent = 
-        (latestData.methane !== undefined ? latestData.methane : '--') + ' ppm';
-      
-      // Calculate changes if we have previous data
-      if (prevData) {
-        // CO2 change
-        const co2Change = latestData.CO2 - prevData.CO2;
-        const co2Element = document.getElementById('co2-change');
-        co2Element.textContent = Math.abs(co2Change).toFixed(2) + ' ppm';
-        co2Element.previousElementSibling.className = 
-          co2Change >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-        
-        // Temperature change
-        const tempChange = latestData.temperature - prevData.temperature;
-        const tempElement = document.getElementById('temp-change');
-        tempElement.textContent = Math.abs(tempChange).toFixed(2) + ' °C';
-        tempElement.previousElementSibling.className = 
-          tempChange >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-        
-        // Humidity change
-        const humidityChange = latestData.humidity - prevData.humidity;
-        const humidityElement = document.getElementById('humidity-change');
-        humidityElement.textContent = Math.abs(humidityChange).toFixed(2) + ' %';
-        humidityElement.previousElementSibling.className = 
-          humidityChange >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-        
-        // Methane change
-        const methaneChange = latestData.methane - prevData.methane;
-        const methaneElement = document.getElementById('methane-change');
-        methaneElement.textContent = Math.abs(methaneChange).toFixed(2) + ' ppm';
-        methaneElement.previousElementSibling.className = 
-          methaneChange >= 0 ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-      }
-    }
-    
-    // Process data and update UI
+    // Process data for charts and table
     function processData(data) {
-      // Prepare data
-      let labels = [], co2 = [], temp = [], humidity = [], methane = [];
-      csvData = []; // Reset CSV data
-      
-      // Get sorted keys for consistent ordering
-      const keys = Object.keys(data).sort();
-      
-      // Quick check if we have too many data points
-      const dataCount = keys.length;
-      if (dataCount === 0) {
+      if (!data || Object.keys(data).length === 0) {
         showAlert('No data available for the selected date range');
-        document.getElementById('records-count').textContent = '0 records';
         return;
       }
       
-      // For very large datasets, sample the data
-      const sampleRate = dataCount > 1000 ? Math.ceil(dataCount / 1000) : 1;
+      // Sort data by timestamp
+      const sortedData = Object.entries(data)
+        .sort(([a], [b]) => new Date(a) - new Date(b));
       
-      // Batch DOM operations for table
-      const tbody = document.getElementById('data-table');
-      tbody.innerHTML = ''; // Clear table
+      // Format timestamps and prepare datasets
+      const timestamps = [];
+      const co2Values = [];
+      const tempValues = [];
+      const humidityValues = [];
+      const methaneValues = [];
+      const soilMoisture1Values = [];
+      const soilMoisture2Values = [];
+      const soilMoisture3Values = [];
+      const soilTemp1Values = [];
+      const soilTemp2Values = [];
+      const soilTemp3Values = [];
       
-      // Create document fragment for better performance
-      const fragment = document.createDocumentFragment();
+      // Prepare CSV data
+      csvData = [
+        ['Timestamp', 'CO2 (ppm)', 'Temperature (°C)', 'Humidity (%)', 'Methane (ppm)', 
+         'Methane Analog', 'Soil Moisture 1 (%)', 'Soil Moisture 2 (%)', 'Soil Moisture 3 (%)',
+         'Soil Temp 1 (°C)', 'Soil Temp 2 (°C)', 'Soil Temp 3 (°C)']
+      ];
       
-      // Process data points
-      keys.forEach((ts, index) => {
-        // Skip for large datasets based on sample rate for charts
-        const isChartPoint = sampleRate === 1 || index % sampleRate === 0 || index === keys.length - 1;
-        
-        const e = data[ts];
-        if (!e) return;
-        
+      // Process data for charts and CSV
+      sortedData.forEach(([timestamp, values]) => {
         // Format timestamp for display
-        const shortLabel = ts.replace('T', ' ').slice(5, 16);
+        // With this:
+let date;
+try {
+  date = new Date(timestamp);
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    console.error("Invalid date from timestamp:", timestamp);
+    date = new Date(); // Fallback to current date
+  }
+} catch (e) {
+  console.error("Error parsing date:", e);
+  date = new Date(); // Fallback to current date
+}
+        const formattedDate = formatDate(date);
+        timestamps.push(formattedDate);
         
-        // Add to chart data if it's a chart point
-        if (isChartPoint) {
-          labels.push(shortLabel);
-          co2.push(e.CO2 ?? 0);
-          temp.push(e.temperature ?? 0);
-          humidity.push(e.humidity ?? 0);
-          methane.push(e.methane ?? 0);
-        }
+        // Push values to arrays (use null for missing data)
+        co2Values.push(values.CO2 !== undefined ? values.CO2 : null);
+        tempValues.push(values.temperature !== undefined ? values.temperature : null);
+        humidityValues.push(values.humidity !== undefined ? values.humidity : null);
+        methaneValues.push(values.methane !== undefined ? values.methane : null);
+        soilMoisture1Values.push(values.soilMoisture1 !== undefined ? values.soilMoisture1 : null);
+        soilMoisture2Values.push(values.soilMoisture2 !== undefined ? values.soilMoisture2 : null);
+        soilMoisture3Values.push(values.soilMoisture3 !== undefined ? values.soilMoisture3 : null);
+        soilTemp1Values.push(values.soilTemp1 !== undefined ? values.soilTemp1 : null);
+        soilTemp2Values.push(values.soilTemp2 !== undefined ? values.soilTemp2 : null);
+        soilTemp3Values.push(values.soilTemp3 !== undefined ? values.soilTemp3 : null);
         
         // Add to CSV data
-        csvData.push([ts, e.CO2, e.temperature, e.humidity, e.methane, e.analogvalues]);
-        
-        // For really large datasets, don't show every point in the table
-        if (dataCount > 200 && index % Math.ceil(dataCount / 200) !== 0 && index !== keys.length - 1) {
-          return;
-        }
-        
-        // Create table row
-        const row = document.createElement('tr');
-        
-        // Add cells
-        [
-          ts,
-          e.CO2 ?? 'N/A',
-          e.temperature ?? 'N/A',
-          e.humidity ?? 'N/A',
-          e.methane ?? 'N/A',
-          e.analogvalues ?? 'N/A'
-        ].forEach(value => {
-          const cell = document.createElement('td');
-          cell.textContent = value;
-          row.appendChild(cell);
-        });
-        
-        fragment.appendChild(row);
+        csvData.push([
+          timestamp,
+          values.CO2 !== undefined ? values.CO2 : '',
+          values.temperature !== undefined ? values.temperature : '',
+          values.humidity !== undefined ? values.humidity : '',
+          values.methane !== undefined ? values.methane : '',
+          values.methaneAnalog !== undefined ? values.methaneAnalog : '',
+          values.soilMoisture1 !== undefined ? values.soilMoisture1 : '',
+          values.soilMoisture2 !== undefined ? values.soilMoisture2 : '',
+          values.soilMoisture3 !== undefined ? values.soilMoisture3 : '',
+          values.soilTemp1 !== undefined ? values.soilTemp1 : '',
+          values.soilTemp2 !== undefined ? values.soilTemp2 : '',
+          values.soilTemp3 !== undefined ? values.soilTemp3 : ''
+        ]);
       });
       
-      // Add all rows at once
-      tbody.appendChild(fragment);
+      // Update charts
+      updateChart(charts.co2, timestamps, co2Values);
+      updateChart(charts.temp, timestamps, tempValues);
+      updateChart(charts.humidity, timestamps, humidityValues);
+      updateChart(charts.methane, timestamps, methaneValues);
       
-      // Update chart data all at once
-      charts.co2.data.labels = 
-      charts.temp.data.labels = 
-      charts.humidity.data.labels = 
-      charts.methane.data.labels = labels;
+      // Update multi-line charts
+      updateMultiLineChart(charts.soilMoisture, timestamps, [
+        soilMoisture1Values,
+        soilMoisture2Values,
+        soilMoisture3Values
+      ]);
       
-      charts.co2.data.datasets[0].data = co2;
-      charts.temp.data.datasets[0].data = temp;
-      charts.humidity.data.datasets[0].data = humidity;
-      charts.methane.data.datasets[0].data = methane;
+      updateMultiLineChart(charts.soilTemp, timestamps, [
+        soilTemp1Values,
+        soilTemp2Values,
+        soilTemp3Values
+      ]);
       
-      // Update all charts without animations
-      Object.values(charts).forEach(chart => chart.update(0));
+      // Update table
+      updateTable(sortedData);
       
       // Update stats
       updateStats(data);
       
-      // Update record counter
-      document.getElementById('records-count').textContent = `${dataCount} records found`;
+      // Update records count
+      document.getElementById('records-count').textContent = `${sortedData.length} records`;
     }
     
-    // Download data as CSV
-    function downloadCSV() {
-      if (!csvData || csvData.length === 0) {
-        showAlert('No data available to download');
+    // Helper function to format date
+    function formatDate(date) {
+      const options = { 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit', 
+        minute: '2-digit'
+      };
+      return date.toLocaleDateString('en-US', options);
+    }
+    
+    // Update single line chart
+    function updateChart(chart, labels, data) {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = data;
+      chart.update();
+    }
+    
+    // Update multi-line chart
+    function updateMultiLineChart(chart, labels, dataSets) {
+      chart.data.labels = labels;
+      
+      // Update each dataset
+      dataSets.forEach((data, index) => {
+        chart.data.datasets[index].data = data;
+      });
+      
+      chart.update();
+    }
+    
+    // Update data table
+    function updateTable(sortedData) {
+      const tableBody = document.getElementById('data-table');
+      tableBody.innerHTML = ''; // Clear existing rows
+      
+      // Only show the last 100 records to avoid performance issues
+      const displayData = sortedData.slice(-100).reverse();
+      
+      displayData.forEach(([timestamp, values]) => {
+        const row = document.createElement('tr');
+        
+        // Format timestamp
+        const date = new Date(timestamp);
+        const formattedDate = date.toLocaleString();
+        
+        // Add cells
+        row.innerHTML = `
+          <td>${formattedDate}</td>
+          <td>${values.CO2 !== undefined ? values.CO2 : '-'}</td>
+          <td>${values.temperature !== undefined ? values.temperature : '-'}</td>
+          <td>${values.humidity !== undefined ? values.humidity : '-'}</td>
+          <td>${values.methane !== undefined ? values.methane : '-'}</td>
+          <td>${values.methaneAnalog !== undefined ? values.methaneAnalog : '-'}</td>
+          <td>${values.soilMoisture1 !== undefined ? values.soilMoisture1 : '-'}</td>
+          <td>${values.soilMoisture2 !== undefined ? values.soilMoisture2 : '-'}</td>
+          <td>${values.soilMoisture3 !== undefined ? values.soilMoisture3 : '-'}</td>
+          <td>${values.soilTemp1 !== undefined ? values.soilTemp1 : '-'}</td>
+          <td>${values.soilTemp2 !== undefined ? values.soilTemp2 : '-'}</td>
+          <td>${values.soilTemp3 !== undefined ? values.soilTemp3 : '-'}</td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // Export data to CSV
+    function exportToCsv() {
+      if (!csvData || csvData.length <= 1) {
+        showAlert('No data to export');
         return;
       }
       
-      // Create CSV content
-      const csvContent = [
-        ['Timestamp', 'CO2 (ppm)', 'Temperature (°C)', 'Humidity (%)', 'Methane (ppm)', 'Analog Values'],
-        ...csvData
-      ].map(row => row.join(',')).join('\n');
+      // Convert to CSV string
+      const csvContent = csvData.map(row => row.join(',')).join('\n');
       
-      // Create download link
+      // Create blob and download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
       
-      // Prepare filename with current date
-      const now = new Date();
-      const filename = `environmental_data_${now.toISOString().split('T')[0]}.csv`;
+      // Use FileSaver.js to save the file
+      saveAs(blob, `environmental_data_${today}.csv`);
       
-      // Set up and click link to trigger download
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      showAlert('Download started');
+      showAlert('CSV downloaded successfully');
     }
     
-    // Initialize date filters
-    function initDateFilters() {
-      // Set default date range (last 7 days)
+    // Initialize date inputs with default values
+    function initDateInputs() {
       const today = new Date();
-      const lastWeek = new Date();
-      lastWeek.setDate(today.getDate() - 7);
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(today.getDate() - 7);
       
-      // Format dates for input fields
-      const formatDate = date => date.toISOString().split('T')[0];
-      
-      document.getElementById('end-date').value = formatDate(today);
-      document.getElementById('start-date').value = formatDate(lastWeek);
+      document.getElementById('end-date').value = today.toISOString().split('T')[0];
+      document.getElementById('start-date').value = oneWeekAgo.toISOString().split('T')[0];
     }
     
-    // Application initialization
-    function init() {
+    // Initialize tabs
+    function initTabs() {
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          // Remove active class from all buttons and contents
+          tabButtons.forEach(btn => btn.classList.remove('active'));
+          tabContents.forEach(content => content.classList.remove('active'));
+          
+          // Add active class to clicked button and corresponding content
+          button.classList.add('active');
+          const tabId = button.getAttribute('data-tab');
+          document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+      });
+    }
+    
+    // Initialize app
+    function initApp() {
       // Initialize Firebase
       initFirebase();
       
       // Initialize charts
       initCharts();
       
-      // Initialize date filters
-      initDateFilters();
+      // Initialize date inputs
+      initDateInputs();
       
-      // Add event listener for refresh button
+      // Initialize tabs
+      initTabs();
+      
+      // Set up event listeners
       document.getElementById('refresh-btn').addEventListener('click', fetchData);
+      document.getElementById('export-btn').addEventListener('click', exportToCsv);
       
-      // Add event listener for export button
-      document.getElementById('export-btn').addEventListener('click', downloadCSV);
+      // Show connected status
+      document.getElementById('loading-indicator').textContent = 'Connected';
       
-      // Add event listener for date filter form
-      document.getElementById('start-date').addEventListener('change', fetchData);
-      document.getElementById('end-date').addEventListener('change', fetchData);
-      
-      // Handle window resize (for charts)
-      window.addEventListener('resize', function() {
-        Object.values(charts).forEach(chart => chart.resize());
-      });
-      
-      // Initial data fetch
+      // Fetch data on load
       fetchData();
     }
     
-    // Initialize app when DOM is ready
-    document.addEventListener('DOMContentLoaded', init);
+    // Wait for DOM to load
+    document.addEventListener('DOMContentLoaded', initApp);
   </script>
+  
+  <!-- Load Bootstrap Icons stylesheet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+  
+  <!-- Google Fonts - Load the necessary font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 </body>
 </html>
