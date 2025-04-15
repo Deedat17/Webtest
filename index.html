@@ -596,7 +596,7 @@
     // Initialize Firebase
     function initFirebase() {
       firebase.initializeApp(firebaseConfig);
-      dbRef = firebase.database().ref('AllData/CO2');
+      dbRef = firebase.database().ref('AllData/decompose');
     }
     
     // Create a chart with optimized options
@@ -888,7 +888,7 @@
       
       // Update atmospheric stat cards
       document.getElementById('co2-latest').textContent = 
-        (latestData.CO2 !== undefined ? latestData.CO2 : '--') + ' ppm';
+        (latestData.co2 !== undefined ? latestData.co2 : '--') + ' ppm';
       
       document.getElementById('temp-latest').textContent = 
         (latestData.temperature !== undefined ? latestData.temperature : '--') + ' °C';
@@ -1011,7 +1011,7 @@ try {
         timestamps.push(formattedDate);
         
         // Push values to arrays (use null for missing data)
-        co2Values.push(values.CO2 !== undefined ? values.CO2 : null);
+        co2Values.push(values.co2 !== undefined ? values.co2 : null);
         tempValues.push(values.temperature !== undefined ? values.temperature : null);
         humidityValues.push(values.humidity !== undefined ? values.humidity : null);
         methaneValues.push(values.methane !== undefined ? values.methane : null);
@@ -1025,7 +1025,7 @@ try {
         // Add to CSV data
         csvData.push([
           timestamp,
-          values.CO2 !== undefined ? values.CO2 : '',
+          values.co2 !== undefined ? values.co2 : '',
           values.temperature !== undefined ? values.temperature : '',
           values.humidity !== undefined ? values.humidity : '',
           values.methane !== undefined ? values.methane : '',
@@ -1116,7 +1116,7 @@ try {
         // Add cells
         row.innerHTML = `
           <td>${formattedDate}</td>
-          <td>${values.CO2 !== undefined ? values.CO2 : '-'}</td>
+          <td>${values.co2 !== undefined ? values.co2 : '-'}</td>
           <td>${values.temperature !== undefined ? values.temperature : '-'}</td>
           <td>${values.humidity !== undefined ? values.humidity : '-'}</td>
           <td>${values.methane !== undefined ? values.methane : '-'}</td>
